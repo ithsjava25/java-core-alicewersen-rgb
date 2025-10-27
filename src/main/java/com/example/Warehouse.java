@@ -1,67 +1,88 @@
 package com.example;
 
+import java.math.BigDecimal;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class Warehouse {
-    private static final Map<String, Warehouse> INSTANCES = new HashMap<>();
+
+    private static final Map<String, Warehouse> INSTANCES = new ConcurrentHashMap<>();
     private final String name;
-    private final List<Product> products = new ArrayList<>();
-    private final List<Product> changedProducts = new ArrayList<>();
+    private final Map<UUID, Product> products = new HashMap<>();
+    private final Set<Product> changedProducts = new HashSet<>();
 
     private Warehouse(String name) {
         this.name = name;
     }
 
-
-    public static Warehouse getInstance(String name) {
+    public static synchronized Warehouse getInstance(String name) {
         return INSTANCES.computeIfAbsent(name, Warehouse::new);
     }
 
     public void addProduct(Product product) {
-        if (product == null) throw new IllegalArgumentException("Product cannot be null.");
-        products.add(product);
+        if (product == null) {
+            throw new IllegalArgumentException("Product cannot be null.");
+        }
+        if (products.containsKey(product.getId())) {
+            throw new IllegalArgumentException("Product with that id already exists, use updateProduct for updates.");
+        }
+        products.put(product.getId(), product);
     }
 
     public List<Product> getProducts() {
-        return Collections.unmodifiableList(products);
+        return List.copyOf(products.values());
     }
 
     public Optional<Product> getProductById(UUID id) {
-        return products.stream().filter(p -> p.uuid().equals(id)).findFirst();
+        return Optional.ofNullable(products.get(id));
     }
 
-    public void updateProductPrice(UUID id, java.math.BigDecimal newPrice) {
-        Product product = getProductById(id)
-                .orElseThrow(() -> new NoSuchElementException("Product not found with id: " + id));
+    public void updateProductPrice(UUID id, BigDecimal newPrice) {
+        Product product = products.get(id);
+        if (product == null) {
+            throw new NoSuchElementException("Product not found with id: " + id);
+        }
         product.price(newPrice);
         changedProducts.add(product);
     }
 
     public List<Product> getChangedProducts() {
-        return Collections.unmodifiableList(changedProducts);
+        return List.copyOf(changedProducts);
     }
 
-    public List<Product> expiredProducts() {
-        List<Product> expired = new ArrayList<>();
-        for (Product p : products) {
-            if (p instanceof Perishable && ((Perishable) p).isExpired()) {
-                expired.add(p);
-            }
-        }
-        return expired;
+    public List<Perishable> expiredProducts() {
+        return products.values().stream()
+                .filter(p -> p instanceof Perishable)
+                .map(p -> (Perishable) p)
+                .filter(Perishable::isExpired)
+                .collect(Collectors.toList());
     }
 
-    public List<Product> shippableProducts() {
-        List<Product> shippable = new ArrayList<>();
-        for (Product p : products) {
-            if (p instanceof Shippable) {
-                shippable.add(p);
-            }
-        }
-        return shippable;
+    public List<Shippable> shippableProducts() {
+        return products.values().stream()
+                .filter(p -> p instanceof Shippable)
+                .map(p -> (Shippable) p)
+                .collect(Collectors.toList());
     }
 
     public void remove(UUID id) {
-        products.removeIf(p -> p.uuid().equals(id));
+        products.remove(id);
+    }
+
+    public void clearProducts() {
+        products.clear();
+        changedProducts.clear();
+    }
+
+    public boolean isEmpty() {
+        return products.isEmpty();
+    }
+    public Map<Category, List<Product>> getProductsGroupedByCategories() {
+        return products.values().stream()
+                .collect(Collectors.groupingBy(Product::category));
+    }
+    public static synchronized Warehouse getInstance() {
+        return getInstance("Default");
     }
 }
