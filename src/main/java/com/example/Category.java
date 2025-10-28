@@ -1,3 +1,5 @@
+// Represents a product category, such as clothing or fruit
+
 package com.example;
 
 import java.util.HashMap;

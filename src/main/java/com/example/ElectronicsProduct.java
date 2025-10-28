@@ -1,3 +1,5 @@
+// Represents an electronic product with shipping cost rules and warranty
+
 package com.example;
 
 import java.math.BigDecimal;

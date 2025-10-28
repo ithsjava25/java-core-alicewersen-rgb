@@ -1,3 +1,5 @@
+// Abstract base class for all classes, holding shared properties, such as price, id and name
+
 package com.example;
 
 import java.math.BigDecimal;

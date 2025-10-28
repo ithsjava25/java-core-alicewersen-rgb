@@ -1,3 +1,5 @@
+// Represents a food product that can expire and be shipped, such as milk and cheese
+
 package com.example;
 
 import java.math.BigDecimal;

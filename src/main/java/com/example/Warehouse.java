@@ -1,3 +1,5 @@
+// Manages a collection of products, including updating, adding and grouping them
+
 package com.example;
 
 import java.math.BigDecimal;
